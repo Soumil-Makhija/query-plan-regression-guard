@@ -1,0 +1,65 @@
+[
+  {
+    "request_id": "synthetic-request",
+    "query_id": "customers",
+    "params_hash": "root",
+    "role": "parent",
+    "duration_ms": 2
+  },
+  {
+    "request_id": "synthetic-request",
+    "query_id": "orders-by-customer",
+    "params_hash": "synthetic-customer-0",
+    "role": "child",
+    "duration_ms": 1.0
+  },
+  {
+    "request_id": "synthetic-request",
+    "query_id": "orders-by-customer",
+    "params_hash": "synthetic-customer-1",
+    "role": "child",
+    "duration_ms": 1.0
+  },
+  {
+    "request_id": "synthetic-request",
+    "query_id": "orders-by-customer",
+    "params_hash": "synthetic-customer-2",
+    "role": "child",
+    "duration_ms": 1.0
+  },
+  {
+    "request_id": "synthetic-request",
+    "query_id": "orders-by-customer",
+    "params_hash": "synthetic-customer-3",
+    "role": "child",
+    "duration_ms": 1.0
+  },
+  {
+    "request_id": "synthetic-request",
+    "query_id": "orders-by-customer",
+    "params_hash": "synthetic-customer-4",
+    "role": "child",
+    "duration_ms": 1.0
+  },
+  {
+    "request_id": "synthetic-request",
+    "query_id": "orders-by-customer",
+    "params_hash": "synthetic-customer-5",
+    "role": "child",
+    "duration_ms": 1.0
+  },
+  {
+    "request_id": "synthetic-request",
+    "query_id": "orders-by-customer",
+    "params_hash": "synthetic-customer-6",
+    "role": "child",
+    "duration_ms": 1.0
+  },
+  {
+    "request_id": "synthetic-request",
+    "query_id": "orders-by-customer",
+    "params_hash": "synthetic-customer-7",
+    "role": "child",
+    "duration_ms": 1.0
+  }
+]

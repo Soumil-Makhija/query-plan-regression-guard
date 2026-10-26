@@ -12,5 +12,8 @@ license = {text = "MIT"}
 authors = [{name = "Soumil Makhija"}]
 dependencies = ["psycopg[binary]>=3.2,<4"]
 
+[project.scripts]
+plan-guard = "plan_guard.cli:main"
+
 [tool.setuptools.packages.find]
 include = ["plan_guard*"]

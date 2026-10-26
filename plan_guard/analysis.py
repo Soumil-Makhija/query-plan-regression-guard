@@ -76,17 +76,9 @@ def _nodes(plan: dict, where: str) -> list[tuple[str, dict]]:
     wrapper = _mapping(plan, where)
     if "Plan" not in wrapper:
         raise ValueError(f"{where}.Plan is required")
-    # Validate all numeric plan values, including optional EXPLAIN statistics.
+    # Unknown fields may include signed query identifiers; only known cost,
+    # count and timing fields require nonnegative values.
     _json_value(wrapper, where)
-    numbers = [(wrapper, where)]
-    while numbers:
-        current, path = numbers.pop()
-        if isinstance(current, dict):
-            numbers.extend((v, f"{path}.{k}") for k, v in current.items())
-        elif isinstance(current, list):
-            numbers.extend((v, f"{path}[{i}]") for i, v in enumerate(current))
-        elif isinstance(current, (int, float)) and not isinstance(current, bool):
-            _number(current, path)
     result = []
     pending = [(wrapper["Plan"], "Plan")]
     while pending:

@@ -200,6 +200,11 @@ class InvalidSnapshotTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             analyze_snapshot(data)
 
+    def test_signed_postgres_query_identifier_is_valid(self):
+        data = snapshot()
+        data['queries']['orders']['plan']['Query Identifier'] = -58789857489123456
+        analyze_snapshot(data)
+
     def test_invalid_tree_shape_is_rejected(self):
         invalid = [None, [], {}, {"Node Type": "Seq Scan", "Total Cost": 2}, scan(Plans={}), scan(Plans=[None])]
         for node in invalid:

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "queries": [
+    {
+      "id": "orders-by-customer/typical",
+      "sql": "queries/orders.sql",
+      "params": [42],
+      "sources": ["app/*.py"]
+    }
+  ],
+  "migrations": ["migrations/*"],
+  "policy": {"min_table_rows": 1000, "max_selectivity": 0.2, "cost_ratio": 2.0, "cost_delta": 50}
+}
