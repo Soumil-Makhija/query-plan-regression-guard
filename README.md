@@ -68,7 +68,8 @@ select their query; manifest or configured migration changes select all queries.
 Globs match path segments: `*` stays within one directory; `**` matches zero or more directories. Unknown base refs
 fail; fetch enough history (CI `fetch-depth: 0`). Without `--base`, all registered
 queries run. Uncommitted changes are not part of PR selection; commit them or run
-all queries. Selection is explicit in each report. An empty selection means no
+all queries. SQL contents are read from the working tree, so use a clean checkout
+for a report that corresponds exactly to committed HEAD. Selection is explicit in each report. An empty selection means no
 mapped query was affected; it does not establish application-wide coverage.
 
 Dependencies are declared, not inferred from arbitrary ORM/application code. Map
@@ -147,9 +148,30 @@ python -m build
 `analysis.py` is pure validation/comparison; `manifest.py` loads strict manifests
 and maps Git changes; `db.py` captures consistent bounded plans; `cli.py` composes
 commands; `report.py` writes shareable evidence. Tests cover root-cost invariants,
-context suppression, scan aliases, trace qualification, Git mappings and actual
-PostgreSQL behavior. CI and a reproducible installed CLI example are being added
-in the final integration milestone.
+context suppression, scan aliases, trace qualification, Git mappings (including
+symlink targets) and actual PostgreSQL behavior. The four-job CI matrix tests
+Python 3.11/3.14 against PostgreSQL 16/18, and publishes validation artifacts.
+See the [CI integration guide](docs/ci.md) for application PR baseline setup.
+
+To reproduce the installed-package PR demonstration:
+
+```sh
+python -m pip install build setuptools wheel
+python -m build --wheel --no-isolation
+python -m pip install --force-reinstall --no-deps dist/*.whl
+python scripts/e2e.py --output artifacts/e2e.json
+```
+
+Set `PLAN_GUARD_DSN` to a disposable database first. The script creates and removes
+only its randomly named schema, creates a temporary Git repository, and runs the
+installed CLI from outside the checkout. It checks affected-query selection,
+index loss/restoration, documentation-only scope, trace candidates, and all three
+exit codes. PostgreSQL 18.0 / Python 3.14.2 on macOS produced estimated cost
+**23.18 → 1395.00** after dropping the customer index on its 50,000-row synthetic
+table (60.18× planner cost, not measured latency). The indexed/restored controls
+passed. Values may differ with version, statistics and configuration. The
+synthetic trace contains eight distinct child calls after one parent; it is an
+illustration of the rule, not an accuracy evaluation on real applications.
 
 Reference semantics: [PostgreSQL EXPLAIN](https://www.postgresql.org/docs/current/sql-explain.html),
 [planner costs](https://www.postgresql.org/docs/current/using-explain.html),

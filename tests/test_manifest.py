@@ -151,6 +151,25 @@ class GitSelectionTests(ManifestTests):
         self.assertEqual("queries/actual.sql", manifest["queries"]["orders"]["resolved_sql_path"])
         self.assertEqual(["orders"], select_queries(manifest, self.base)[0])
 
+    def test_retargeted_directory_symlink_selects_dependent_query(self):
+        for directory in ("sql_a", "sql_b"):
+            (self.root / directory).mkdir()
+            (self.root / directory / "orders.sql").write_text("SELECT 1")
+        link = self.root / "sql_link"
+        link.symlink_to("sql_a", target_is_directory=True)
+        self.data["queries"][0]["sql"] = "sql_link/orders.sql"
+        self.write()
+        self.commit("directory SQL symlink")
+        self.base = self.git("rev-parse", "HEAD").strip()
+        link.unlink()
+        link.symlink_to("sql_b", target_is_directory=True)
+        self.commit("retarget SQL directory")
+        manifest = load_manifest(self.path)
+        self.assertIn("sql_link", manifest["queries"]["orders"]["sql_dependencies"])
+        selected, metadata = select_queries(manifest, self.base)
+        self.assertEqual(["orders"], selected)
+        self.assertEqual(["sql_link"], metadata["changed_paths"])
+
     def test_migration_or_manifest_changed_selects_every_query(self):
         self.change("migrations/001_drop_index.sql", "DROP INDEX orders_idx")
         self.assertEqual(["orders", "users"], self.selection()[0])

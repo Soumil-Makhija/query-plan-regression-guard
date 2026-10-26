@@ -113,6 +113,13 @@ class PostgresIntegrationTests(unittest.TestCase):
         self.assertEqual(report['context_suppressed_query_ids'], ['orders'])
         self.assertIn('CONTEXT_MISMATCH', {f['code'] for f in report['findings']})
 
+    def test_named_bound_parameters(self):
+        snapshot = self.collect(self.manifest(
+            f'SELECT id FROM {self.schema}.orders WHERE customer_id=%(customer)s AND id>%(minimum)s',
+            {'customer': 42, 'minimum': 0}))
+        self.assertEqual(len(snapshot['queries']), 1)
+        self.assertEqual(snapshot['queries']['orders']['relations'][f'{self.schema}.orders']['rows'], 50000)
+
     def test_static_percent_sql_without_parameters(self):
         snap = self.collect(self.manifest("SELECT 10 % 3, 'hello' LIKE 'hell%'", []))
         self.assertIn('orders', snap['queries'])

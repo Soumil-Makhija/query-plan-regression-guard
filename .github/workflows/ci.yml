@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python }} / PostgreSQL ${{ matrix.postgres }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.14']
+        postgres: ['16', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: plan_guard
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: plan_guard
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U plan_guard -d plan_guard"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PLAN_GUARD_TEST_DSN: postgresql://plan_guard:ci-only-password@127.0.0.1:5432/plan_guard
+      PLAN_GUARD_DSN: postgresql://plan_guard:ci-only-password@127.0.0.1:5432/plan_guard
+      EXPECTED_POSTGRES_MAJOR: ${{ matrix.postgres }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install project and build tools
+        run: python -m pip install . build setuptools wheel
+      - name: Require real PostgreSQL integration environment
+        run: |
+          mkdir -p artifacts
+          python - <<'PY'
+          import json
+          import os
+          import platform
+          from pathlib import Path
+          import psycopg
+
+          dsn = os.environ['PLAN_GUARD_TEST_DSN']
+          assert dsn and dsn == os.environ['PLAN_GUARD_DSN']
+          with psycopg.connect(dsn, connect_timeout=5) as connection:
+              version = int(connection.execute('SHOW server_version_num').fetchone()[0])
+          assert version // 10000 == int(os.environ['EXPECTED_POSTGRES_MAJOR'])
+          evidence = {'python': platform.python_version(), 'server_version_num': version,
+                      'integration_database_verified': True}
+          Path('artifacts/environment.json').write_text(json.dumps(evidence, indent=2) + '\n')
+          print('Verified PostgreSQL integration database:', version)
+          PY
+      - name: Run unit and real PostgreSQL tests
+        run: |
+          set -o pipefail
+          python -m unittest discover -v 2>&1 | tee artifacts/tests.log
+      - name: Check compilation and whitespace
+        run: |
+          python -m compileall -q plan_guard tests scripts
+          git diff --check
+      - name: Build and install wheel
+        run: |
+          python -m build --wheel --no-isolation
+          python -m pip install --force-reinstall --no-deps dist/*.whl
+      - name: Exercise installed CLI outside the checkout
+        run: python scripts/e2e.py --output artifacts/e2e.json
+      - name: Upload validation evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: evidence-python-${{ matrix.python }}-postgres-${{ matrix.postgres }}
+          path: |
+            artifacts/
+            dist/*.whl
+          if-no-files-found: warn
+          retention-days: 14

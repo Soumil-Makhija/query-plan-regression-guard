@@ -96,8 +96,13 @@ def load_manifest(path: Path | str) -> dict:
                 pending.extend(current)
             elif isinstance(current, dict):
                 pending.extend(current.values())
+        resolved_path = resolved_sql.relative_to(root).as_posix()
+        dependencies = {sql_path, resolved_path}
+        dependencies.update(parent.as_posix() for parent in PurePosixPath(sql_path).parents
+                            if parent.parts and (root / parent).is_symlink())
         queries[query_id] = {"sql": sql, "sql_path": sql_path,
-                             "resolved_sql_path": resolved_sql.relative_to(root).as_posix(), "params": params,
+                             "resolved_sql_path": resolved_path,
+                             "sql_dependencies": sorted(dependencies), "params": params,
                              "sources": _globs(raw.get("sources", []), f"{where}.sources")}
     migrations = _globs(data.get("migrations", []), "migrations")
     policy = data.get("policy", {})
@@ -190,7 +195,7 @@ def select_queries(manifest: dict, base: str | None = None) -> tuple[list[str], 
         metadata["reason"] = "Migration changed; all registered queries selected"
         return all_ids, metadata
     selected = sorted(query_id for query_id, query in manifest["queries"].items()
-                      if query["sql_path"] in relative or query["resolved_sql_path"] in relative or any(
+                      if any(path in relative for path in query["sql_dependencies"]) or any(
                           _match(path, glob) for path in relative for glob in query["sources"]))
     metadata["reason"] = "Changed registered SQL or source dependencies" if selected else "No registered query dependencies changed"
     return selected, metadata
